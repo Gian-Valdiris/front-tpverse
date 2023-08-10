@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Multiplayer</title>
+        <link rel="shortcut icon" href="TemplateData/favicon.ico" />
+        <link rel="stylesheet" href="TemplateData/style.css" />
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="module" src="/src/main.tsx"></script>
+        <script>
+            const hideFullScreenButton = "true";
+            const buildUrl = "Build";
+            const loaderUrl = buildUrl + "/Web.loader.js";
+            const config = {
+                dataUrl: buildUrl + "/Web.data.unityweb",
+                frameworkUrl: buildUrl + "/Web.framework.js.unityweb",
+                codeUrl: buildUrl + "/Web.wasm.unityweb",
+                streamingAssetsUrl: "StreamingAssets",
+                companyName: "DefaultCompany",
+                productName: "Multiplayer",
+                productVersion: "1.0",
+            };
+
+            const container = document.querySelector("#unity-container");
+            const canvas = document.querySelector("#unity-canvas");
+            const loadingCover = document.querySelector("#loading-cover");
+            const progressBarEmpty = document.querySelector(
+                "#unity-progress-bar-empty"
+            );
+            const progressBarFull = document.querySelector(
+                "#unity-progress-bar-full"
+            );
+            const fullscreenButton = document.querySelector(
+                "#unity-fullscreen-button"
+            );
+            const spinner = document.querySelector(".spinner");
+
+            const canFullscreen = (function () {
+                for (const key of [
+                    "exitFullscreen",
+                    "webkitExitFullscreen",
+                    "webkitCancelFullScreen",
+                    "mozCancelFullScreen",
+                    "msExitFullscreen",
+                ]) {
+                    if (key in document) {
+                        return true;
+                    }
+                }
+                return false;
+            })();
+
+            if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                container.classNameName = "unity-mobile";
+                config.devicePixelRatio = 1;
+            }
+            loadingCover.style.display = "";
+
+            const script = document.createElement("script");
+            var GameInstance = null;
+            script.src = loaderUrl;
+            script.onload = () => {
+                createUnityInstance(canvas, config, (progress) => {
+                    spinner.style.display = "none";
+                    progressBarEmpty.style.display = "";
+                    progressBarFull.style.width = `${100 * progress}%`;
+                })
+                    .then((unityInstance) => {
+                        GameInstance = unityInstance;
+                        loadingCover.style.display = "none";
+                        if (canFullscreen) {
+                            if (!hideFullScreenButton) {
+                                fullscreenButton.style.display = "";
+                            }
+                            fullscreenButton.onclick = () => {
+                                unityInstance.SetFullscreen(1);
+                            };
+                        }
+                    })
+                    .catch((message) => {
+                        alert(message);
+                    });
+            };
+            document.body.appendChild(script);
+            const displayMediaOptions = {
+                video: {
+                    displaySurface: "window",
+                    frameRate: 16,
+                    width: 1280,
+                    height: 720,
+                },
+                audio: {
+                    sampleRate: 8000,
+                },
+            };
+
+            async function StartRecording() {
+                const video = document.getElementById("videoHidden");
+                try {
+                    var stream = await navigator.mediaDevices.getDisplayMedia(
+                        displayMediaOptions
+                    );
+                } catch (err) {
+                    console.error(err);
+                }
+                video.srcObject = stream;
+
+                //video
+                const canvas = document.getElementById("canvasHidden");
+                const ctx = canvas.getContext("2d");
+                //const video = document.getElementById("videoHidden");
+                var counter = 0;
+
+                //var stream = videoElem.srcObject;
+
+                var lastImage = "";
+
+                //audio
+                //var audioContext = new AudioContext();
+                // Create a MediaStreamAudioDestinationNode
+                //var destinationNode = audioContext.createMediaStreamDestination(stream);
+                // Create a MediaRecorder object
+                const audioStream = new MediaStream(stream.getAudioTracks());
+                let recorder = new MediaRecorder(audioStream);
+                //recorder.start();
+                let reader = new FileReader();
+
+                video.addEventListener("play", () => {
+                    const timerCallback = () => {
+                        if (video.paused || video.ended) {
+                            return;
+                        }
+
+                        recorder.stop();
+                        recorder.ondataavailable = function (event) {
+                            // Create a URL object from the WAV blob
+                            var blob = new Blob(event.data, {
+                                type: "audio/webm",
+                            });
+                            var audioUrl = reader.readAsDataURL(blob);
+                            console.log(audioUrl);
+                        };
+                        //recorder.start();
+                        //video
+                        ctx.drawImage(video, 0, 0, 1280, 720);
+
+                        var newImage = canvas.toDataURL("image/jpeg", 0.33);
+
+                        if (lastImage === newImage) {
+                            if (counter % 2 != 0) {
+                                console.log("updated");
+                                counter++;
+                                var aux = canvas.toDataURL("image/jpeg", 0.5);
+                                GameInstance.SendMessage(
+                                    "ScreenSharing",
+                                    "SetScreenFrame",
+                                    aux
+                                );
+                            }
+                        } else {
+                            counter++;
+                            if (counter % 2 == 0)
+                                var aux = canvas.toDataURL("image/jpeg", 0.33);
+                            else var aux = canvas.toDataURL("image/jpeg", 0.2);
+                            GameInstance.SendMessage(
+                                "ScreenSharing",
+                                "SetScreenFrame",
+                                aux
+                            );
+                            lastImage = newImage;
+                        }
+
+                        setTimeout(() => {
+                            requestAnimationFrame(timerCallback);
+                        }, 63);
+                    };
+                    requestAnimationFrame(timerCallback);
+                });
+            }
+        </script>
+        <script src="app.js"></script>
+    </body>
+</html>
