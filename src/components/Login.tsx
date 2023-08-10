@@ -9,7 +9,7 @@ export default function Login() {
     const navigate = useNavigate();
     const isAuthenticated = useIsAuthenticated();
     const { instance, accounts } = useMsal();
-    const [accessToken, setAccessToken] = useState<any>(null);
+    const [, setAccessToken] = useState(null);
     const [error, setError] = useState<string>("");
 
     useEffect(() => {
@@ -47,7 +47,7 @@ export default function Login() {
         };
         instance
             .acquireTokenSilent(request)
-            .then((response) => {
+            .then((response:any) => {
                 setAccessToken(response.accessToken);
                 callMsGraph(response.accessToken).then(async (data) => {
                     // Do what you want with the data, such as putting it in localstorage
@@ -74,7 +74,7 @@ export default function Login() {
                 });
             })
             .catch((_e) => {
-                instance.acquireTokenPopup(request).then((response) => {
+                instance.acquireTokenPopup(request).then((response:any) => {
                     setAccessToken(response.accessToken);
                 });
                 setError(

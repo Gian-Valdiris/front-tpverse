@@ -15,7 +15,6 @@ export function TPVerse() {
         sendMessage,
         addEventListener,
         removeEventListener,
-        requestFullscreen,
     } = useUnityContext({
         loaderUrl: `${unityContextLocation}/Build/Unity.loader.js`,
         dataUrl: `${unityContextLocation}/Build/Unity.data`,
@@ -26,7 +25,7 @@ export function TPVerse() {
         sendMessage("LoginManager", "OnLoginUser", JSON.stringify(user));
     }, [sendMessage]);
 
-    const [img, setImg] = useState<any>();
+    const [, setImg] = useState<any>();
     const getImg = async (token: any) => {
         const responseImg = await fetch(
             `https://graph.microsoft.com/v1.0/me/photo/$value`,
@@ -69,10 +68,6 @@ export function TPVerse() {
             user = "";
         }
     }, [addEventListener, removeEventListener, handleLogin]);
-
-    function handleFullScreen() {
-        requestFullscreen(true);
-    }
 
     return (
         <>
